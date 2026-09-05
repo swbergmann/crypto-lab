@@ -1,24 +1,27 @@
 package com.example.cryptolab.crypto;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 import org.springframework.stereotype.Service;
 
-/**
- * LAB VULNERABILITY 1: AES in ECB mode is deterministic and does not provide
- * authenticated encryption. Replace this class using the first lab exercise.
- */
+/** Secure solution for lab 1: authenticated encryption with a fresh IV. */
 @Service
 public class WeakCryptoService {
 
-    private static final String TRANSFORMATION = "AES/ECB/PKCS5Padding";
+    private static final String TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final int IV_LENGTH = 12;
+    private static final int TAG_LENGTH_BITS = 128;
 
     private final SecretKey key;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     public WeakCryptoService(LabKeyProvider keyProvider) {
         this.key = keyProvider.currentKey();
@@ -32,10 +35,18 @@ public class WeakCryptoService {
 
     private String encrypt(String plaintext) {
         try {
+            byte[] iv = new byte[IV_LENGTH];
+            secureRandom.nextBytes(iv);
+
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(ciphertext);
+
+            byte[] payload = ByteBuffer.allocate(iv.length + ciphertext.length)
+                .put(iv)
+                .put(ciphertext)
+                .array();
+            return Base64.getEncoder().encodeToString(payload);
         } catch (GeneralSecurityException exception) {
             throw new IllegalStateException("Encryption failed", exception);
         }
