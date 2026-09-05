@@ -34,11 +34,94 @@ backend/src/main/java/com/example/cryptolab/crypto/WeakCryptoService.java
 
 ### Verify with CodeQL
 
-Push the repository to a GitHub repository. The included CodeQL workflow runs the `security-extended` suite for Java/Kotlin and JavaScript/TypeScript.
+This lab uses **GitHub-hosted CodeQL**. The workflow file at
+`.github/workflows/codeql.yml` tells GitHub Actions to compile the Spring Boot
+code and scan it. Nothing needs to be installed locally for this scan.
 
-In GitHub, open **Security → Code scanning** and locate the Java finding for use of a broken or risky cryptographic algorithm. CodeQL documents the relevant `java/weak-cryptographic-algorithm` query at:
+CodeQL is available for public GitHub repositories. A private repository needs
+GitHub Code Security to be enabled for that repository. The easiest academic
+lab setup is therefore a new public repository containing synthetic data only.
+Before publishing, confirm that you have not added real passwords, tokens,
+customer data, certificates, or other secrets.
 
-https://codeql.github.com/codeql-query-help/java/java-weak-cryptographic-algorithm/
+If an Actions run ends with `Resource not accessible by integration` and the
+Code scanning page says it is not enabled, first check the repository visibility
+under **Settings → General**. Either make this synthetic lab public under
+**Danger Zone → Change repository visibility**, or keep it private and enable
+GitHub Code Security under **Settings → Code security** if your account or
+organization has the required license. The workflow cannot upload results to a
+private repository for which Code Security is unavailable.
+
+#### A. Create and push the vulnerable baseline
+
+Open a second terminal and run:
+
+```bash
+cd "$HOME/Documents/Codex/2026-09-05/for/outputs/crypto-lab"
+
+gh auth status
+```
+
+If that reports that you are not logged in, authenticate:
+
+```bash
+gh auth login --web --git-protocol https
+```
+
+Then create the baseline commit and repository:
+
+```bash
+git init
+git branch -M main
+git add .
+git commit -m "Add intentionally vulnerable cryptography lab baseline"
+gh repo create crypto-lab --public --source=. --remote=origin --push
+```
+
+If you already created the GitHub repository in the browser, replace the last
+command with the repository URL shown by GitHub:
+
+```bash
+git remote add origin https://github.com/YOUR-GITHUB-NAME/crypto-lab.git
+git push -u origin main
+```
+
+#### B. Wait for the CodeQL workflow
+
+1. Open the repository on GitHub.
+2. Select **Actions** in the repository navigation.
+3. Select the workflow named **CodeQL**.
+4. Open the newest run created by the push.
+5. Wait for both jobs to finish. In particular, **Analyze java-kotlin** must
+   display a green check mark. The Oracle container does not need to be running
+   for this GitHub build.
+
+The scan normally starts automatically because the workflow listens for pushes
+to `main`. If it did not start, select **Actions → CodeQL → Run workflow**, leave
+the branch as `main`, and select **Run workflow**.
+
+#### C. Locate and record the finding
+
+1. Select the repository's **Security** tab.
+2. In the left navigation, select **Code scanning** or **Code scanning alerts**.
+3. Open the alert titled **Use of a broken or risky cryptographic algorithm**.
+4. Confirm these details:
+
+   - Language: Java/Kotlin
+   - Query ID: `java/weak-cryptographic-algorithm`
+   - File: `backend/src/main/java/com/example/cryptolab/crypto/WeakCryptoService.java`
+   - The data-flow path ends at `Cipher.getInstance(...)` and includes
+     `AES/ECB/PKCS5Padding`.
+
+Save a screenshot or export containing the alert title, query ID, affected file,
+severity, commit, and date. This is the **before** evidence. Do not dismiss the
+alert; the follow-up scan should close it as fixed.
+
+CodeQL documents this query and explicitly recommends avoiding ECB mode:
+
+- [CodeQL: Use of a broken or risky cryptographic algorithm](https://codeql.github.com/codeql-query-help/java/java-weak-cryptographic-algorithm/)
+- [GitHub: Configuring code scanning for a repository](https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/configuring-code-scanning-for-a-repository)
+- [GitHub: Assessing code scanning alerts](https://docs.github.com/en/code-security/code-scanning/managing-code-scanning-alerts/assessing-code-scanning-alerts-for-your-repository)
 
 ### Verify with SonarQube locally
 
@@ -70,7 +153,33 @@ diff -u \
 make fix-1
 ```
 
-Restart the application and select **Encrypt twice** again. The results must differ. Rerun the same CodeQL or SonarQube scan and retain evidence that the original finding is closed.
+Review and build the exact change:
+
+```bash
+git diff -- backend/src/main/java/com/example/cryptolab/crypto/WeakCryptoService.java
+make build
+```
+
+Stop the running application with `Control-C`, run `make run` again, and select
+**Encrypt twice**. The two ciphertexts must now differ.
+
+Commit and push the remediation:
+
+```bash
+git add backend/src/main/java/com/example/cryptolab/crypto/WeakCryptoService.java
+git commit -m "Replace AES-ECB with authenticated AES-GCM"
+git push
+```
+
+Return to **GitHub → Actions → CodeQL** and wait for **Analyze java-kotlin** to
+succeed again. Then open **Security → Code scanning alerts**, change the filter
+from **Open** to **Closed**, and open the original alert. It should show that the
+alert was closed as **Fixed** by the remediation commit. Save this page as the
+**after** evidence.
+
+If the workflow succeeds but the original alert remains open, verify that the
+default branch is `main`, that the remediation commit appears on GitHub, and
+that the new run analyzed that commit SHA.
 
 The remediation uses `AES/GCM/NoPadding`, a newly generated IV for each encryption, and stores the IV with the authenticated ciphertext.
 
@@ -189,4 +298,3 @@ For each exercise, preserve:
 | Limitations | What the tool could not inspect, such as private CloudFront-origin or ECS-Oracle traffic |
 
 Do not claim that a vulnerability is fixed merely because a scanner is silent. Confirm the expected security property as well: randomized authenticated ciphertext, no key in the repository, and TLS across every relevant network hop.
-
