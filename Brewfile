@@ -1,0 +1,7 @@
+brew "openjdk@21"
+brew "maven"
+brew "colima"
+brew "docker"
+brew "docker-compose"
+brew "mkcert"
+brew "jq"

@@ -1,0 +1,51 @@
+{
+  "family": "customer-crypto-lab",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "REPLACE_WITH_ECS_EXECUTION_ROLE_ARN",
+  "taskRoleArn": "REPLACE_WITH_LEAST_PRIVILEGE_APPLICATION_TASK_ROLE_ARN",
+  "containerDefinitions": [
+    {
+      "name": "application",
+      "image": "REPLACE_WITH_ECR_IMAGE_DIGEST",
+      "essential": true,
+      "user": "10001",
+      "readonlyRootFilesystem": true,
+      "portMappings": [
+        {
+          "name": "https",
+          "containerPort": 8443,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "environment": [
+        {
+          "name": "LAB_DB_URL",
+          "value": "REPLACE_WITH_ORACLE_TCPS_JDBC_URL"
+        },
+        {
+          "name": "LAB_DB_USER",
+          "value": "REPLACE_WITH_RESTRICTED_ORACLE_USER"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "LAB_DB_PASSWORD",
+          "valueFrom": "REPLACE_WITH_SECRETS_MANAGER_ARN"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/customer-crypto-lab",
+          "awslogs-region": "REPLACE_WITH_AWS_REGION",
+          "awslogs-stream-prefix": "application"
+        }
+      }
+    }
+  ]
+}
+

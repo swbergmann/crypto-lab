@@ -1,0 +1,49 @@
+openapi: 3.0.3
+info:
+  title: Customer Data Crypto Lab
+  version: 0.1.0
+  description: Local-only API for cryptographic failure training.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/labs/status:
+    get:
+      summary: Return the active lab configuration
+      responses:
+        "200":
+          description: Current lab status
+  /api/labs/weak/encrypt-twice:
+    post:
+      summary: Encrypt the same synthetic value twice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncryptRequest"
+      responses:
+        "200":
+          description: Two ciphertexts and their equality result
+  /api/labs/hardcoded/encrypt:
+    post:
+      summary: Encrypt a synthetic value using the key-management lab
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncryptRequest"
+      responses:
+        "200":
+          description: Ciphertext and key source
+components:
+  schemas:
+    EncryptRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+          maxLength: 256
+          example: ATU-12345678
+

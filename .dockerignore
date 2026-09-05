@@ -1,0 +1,6 @@
+.git
+.local
+reports
+frontend/node_modules
+backend/target
+

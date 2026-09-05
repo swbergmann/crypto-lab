@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: crypto-lab
+  datasource:
+    url: ${LAB_DB_URL:jdbc:oracle:thin:@localhost:1521/FREEPDB1}
+    username: ${LAB_DB_USER}
+    password: ${LAB_DB_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    root: INFO
+    com.example.cryptolab: INFO
+

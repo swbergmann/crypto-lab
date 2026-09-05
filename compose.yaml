@@ -1,0 +1,50 @@
+name: crypto-lab
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23.26.2-slim-faststart
+    environment:
+      ORACLE_PASSWORD: local-oracle-admin-only
+      APP_USER: crypto_lab
+      APP_USER_PASSWORD: crypto_lab_local_only
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+    environment:
+      LAB_DB_URL: jdbc:oracle:thin:@oracle:1521/FREEPDB1
+      LAB_DB_USER: crypto_lab
+      LAB_DB_PASSWORD: crypto_lab_local_only
+    ports:
+      - "8080:8080"
+    depends_on:
+      oracle:
+        condition: service_healthy
+
+  sonarqube:
+    image: sonarqube:community
+    profiles: ["security"]
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar-data:/opt/sonarqube/data
+      - sonar-logs:/opt/sonarqube/logs
+
+volumes:
+  oracle-data:
+  sonar-data:
+  sonar-logs:
+

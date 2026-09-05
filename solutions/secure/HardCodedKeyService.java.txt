@@ -1,0 +1,65 @@
+package com.example.cryptolab.crypto;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.util.Base64;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+
+import org.springframework.stereotype.Service;
+
+/**
+ * Secure local solution for lab 2. The key is generated outside this class and
+ * injected. An ECS deployment should provide a KMS-backed implementation.
+ */
+@Service
+public class HardCodedKeyService {
+
+    private static final String TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final int IV_LENGTH = 12;
+    private static final int TAG_LENGTH_BITS = 128;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+    private final SecretKey key;
+    private final String keySource;
+
+    public HardCodedKeyService(LabKeyProvider keyProvider) {
+        this.key = keyProvider.currentKey();
+        this.keySource = keyProvider.description();
+    }
+
+    public EncryptionResult encrypt(String plaintext) {
+        try {
+            byte[] iv = new byte[IV_LENGTH];
+            secureRandom.nextBytes(iv);
+
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
+            byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+
+            byte[] payload = ByteBuffer.allocate(iv.length + ciphertext.length)
+                .put(iv)
+                .put(ciphertext)
+                .array();
+
+            return new EncryptionResult(
+                TRANSFORMATION,
+                Base64.getEncoder().encodeToString(payload),
+                keySource
+            );
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("Encryption failed", exception);
+        }
+    }
+
+    public String keySource() {
+        return keySource;
+    }
+
+    public record EncryptionResult(String algorithm, String ciphertext, String keySource) {}
+}
+

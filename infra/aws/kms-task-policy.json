@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UseOnlyTheCustomerDataKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "REPLACE_WITH_CUSTOMER_DATA_KMS_KEY_ARN",
+      "Condition": {
+        "StringEquals": {
+          "kms:EncryptionContext:application": "customer-api"
+        }
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+.vscode/
+.local/
+reports/
+frontend/node_modules/
+backend/target/
+backend/src/main/resources/static/assets/
+backend/src/main/resources/static/index.html
+*.log
+
